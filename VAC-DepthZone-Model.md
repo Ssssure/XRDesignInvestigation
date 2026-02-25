@@ -888,6 +888,76 @@ def compute_all_boundaries(F):
 
 ---
 
+## 附录 A：主流头显焦平面距离参考
+
+### A.1 现状说明
+
+截至 2026 年 2 月，**几乎没有任何头显厂商在官方技术规格中公开标注焦平面距离（virtual image distance / focal plane distance）这一参数。** 这是 XR 行业中一个公认的信息缺口。
+
+流传在社区和文献中的数值主要来自以下渠道，可信度依次递减：
+
+| 来源类型 | 可信度 | 示例 |
+| :--- | :--- | :--- |
+| 厂商开发者文档中的间接数据 | ★★★★ | Magic Leap 开发文档中提到"焦平面附近约 0.75m"处为最优内容放置距离 |
+| 学术论文中对实验设备的描述 | ★★★☆ | 论文中记录被测头显的焦距作为实验参数 |
+| 处方镜片厂商的校准数据 | ★★★☆ | VROptician、WIDMOvr 等根据远视力处方制作镜片，间接依赖焦距 |
+| 社区逆向测量 / 拆解分析 | ★★☆☆ | 开发者论坛和 Reddit 上的个人测量报告 |
+| 二手引用 / 经验估计 | ★☆☆☆ | 博客文章和科普内容中的笼统描述 |
+
+### A.2 已知信息汇总
+
+以下表格汇集了目前可获取的信息。**标注"估计值"的条目没有找到一手权威来源，仅供参考，不应作为工程精确值使用。**
+
+#### VR 头显
+
+| 设备 | 镜片类型 | 焦平面距离（估计） | 信息来源 & 链接 | 可信度 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Meta Quest 2** | 菲涅尔 (Fresnel) | ~1.3m（社区报告） | [Meta 社区论坛讨论](https://communityforums.atmeta.com/discussions/dev-pcvr/how-far-is-the-focal-plane-away-from-the-eyes/223402) | ★★☆☆ |
+| **Meta Quest 3** | 煎饼 (Pancake) | ~1.3m（社区报告） | [Meta 社区论坛讨论](https://communityforums.atmeta.com/t5/Get-Help/What-distance-I-should-get-my-prescription-lenses-for-the-Quest/td-p/1232003)；处方镜片基于远视力处方制作 | ★★☆☆ |
+| **Meta Quest Pro** | 煎饼 (Pancake) | ~1.3m 或 ~1.5m（社区报告存在分歧） | [Meta 社区论坛讨论](https://communityforums.atmeta.com/t5/Talk-VR/focal-distance-distance-from-eyes-and-lens-power-of-quest-pro/td-p/1074132)——两个数值均有人报告 | ★★☆☆ |
+| **Apple Vision Pro** | 煎饼 (Pancake) | ~1.2–1.3m（社区估计） | [Apple 社区讨论](https://discussions.apple.com/thread/255464091)；[SURF XR 技术深潜](https://xrif.surf.nl/t/technical-deep-dive-on-the-apple-vision-pro-image-quality-and-optics/105)；Apple 官方未公布此参数 | ★★☆☆ |
+| **Valve Index** | 双元件定制镜片 | ~2.0m（经验估计） | 无一手来源；Valve [官方规格页](https://www.valvesoftware.com/index/headset) 未提及焦距 | ★☆☆☆ |
+| **HTC Vive / Vive Pro** | 菲涅尔 (Fresnel) | ~1.5–2.0m（经验估计） | 无一手来源；HTC 官方规格未提及 | ★☆☆☆ |
+| **HTC Vive Focus Vision** | 煎饼 (Pancake) | 未知 | [HTC 官方规格页](https://www.vive.com/uk/product/vive-focus-vision/specs/) 未提及 | — |
+| **PSVR** | 非球面镜片 | ~2.0m（经验估计） | [iFixit 拆解](https://www.ifixit.com/Teardown/PlayStation+VR+Teardown/69341)——仅涉及物理拆解，未测量焦距 | ★☆☆☆ |
+| **PSVR 2** | 菲涅尔 (Fresnel) | ~1.5–2.0m（经验估计） | [UploadVR 技术分析](https://uploadvr.com/psvr2-technical-analysis)——分析了镜片和显示技术，未报告焦距 | ★☆☆☆ |
+| **Pico 4** | 煎饼 (Pancake) | ~1.3m（社区报告） | 无一手权威来源 | ★☆☆☆ |
+| **Bigscreen Beyond** | 煎饼 (Pancake) | 未知 | — | — |
+
+#### AR / MR 头显
+
+AR 头显因波导光学的特殊性，焦距信息披露情况稍好：
+
+| 设备 | 显示类型 | 焦平面距离 | 信息来源 & 链接 | 可信度 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Magic Leap 2** | 波导 (Waveguide) | ~0.75m（推荐放置距离） | [开发者文档 — 舒适与内容放置](https://developer-docs.magicleap.cloud/docs/guides/best-practices/comfort-content-placement/)——建议内容放置在"焦平面附近约 0.75m" | ★★★★ |
+| **Magic Leap 2** | 波导 (Waveguide) | 0.37m — ∞（显示区域） | [开发者文档 — VAC](https://developer-docs.magicleap.cloud/docs/guides/features/display-zone/vergence-accomodation-conflict/)——近裁剪面默认 0.37m | ★★★★ |
+| **Microsoft HoloLens 2** | 波导 (Waveguide) | ~2.0m（常见引用值） | [Microsoft 官方硬件页](https://learn.microsoft.com/en-us/hololens/hololens2-hardware)——未明确标注焦距，2.0m 值来自学术文献引用 | ★★★☆ |
+
+### A.3 一般性结论
+
+虽然精确的逐设备值难以获取，但以下趋势是可靠的：
+
+1. **多数 VR 头显的焦平面在 1.0–2.0m 范围内**（[Heise 技术分析](https://www.heise.de/en/background/Lenses-in-VR-glasses-Between-sharpness-weight-and-optical-side-effects-10503349.html)）。
+2. **煎饼镜片（Pancake）头显的焦距倾向于偏短**（~1.2–1.5m），菲涅尔镜片头显的焦距倾向于偏长（~1.5–2.0m）。
+3. **AR 波导头显的焦距范围更宽**，且部分设备已在开发文档中提供了推荐放置距离。
+4. **焦距是使用本模型的核心输入参数。** 在无法确认精确值的情况下，建议：
+   - 煎饼镜片 VR 头显默认使用 **F = 1.3m**
+   - 菲涅尔镜片 VR 头显默认使用 **F = 1.5m**
+   - 如果需要精确数据，使用可调焦透镜法（参见下方学术方法）自行测量
+
+### A.4 焦平面距离的测量方法
+
+如果需要精确获取某款头显的焦平面距离，以下学术方法可参考：
+
+| 方法 | 原理 | 参考文献 |
+| :--- | :--- | :--- |
+| **可变焦液体透镜法** | 通过一个可编程变焦透镜扫描不同屈光度，找到使虚拟画面最清晰的焦点位置，反推焦距 | [Optica Applied Optics, 2024](https://opg.optica.org/ao/upcoming_pdf.cfm?id=524353)——误差约 5cm |
+| **自动对焦法** | 使用步进电机驱动的调焦透镜+图像清晰度分析算法自动定位焦平面 | [Applied Optics 61(30), 2022](https://opg.optica.org/abstract.cfm?uri=ao-61-30-9093) |
+| **简易验光片法** | 在头显目镜前叠加不同屈光度的验光试片，找到使画面最清晰的那片的屈光度 P，则焦距 F ≈ 1/(D_lens + P)，其中 D_lens 为头显镜片本身的屈光度 | 社区常用方法，精度约 ±0.2m |
+
+---
+
 ## 十二、参考文献
 
 - Hoffman, D. M., Girshick, A. R., Akeley, K., & Banks, M. S. (2008). Vergence–accommodation conflicts hinder visual performance and cause visual fatigue. *Journal of Vision*, 8(3), 33.
