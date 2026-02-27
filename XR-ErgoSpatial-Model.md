@@ -154,41 +154,161 @@ P_shoulder_right = (
 
 ---
 
-## 三、Step 2：交互模态决策 — 物理可达性判断
+## 三、交互模态决策 — 物理可达性判断
 
 ### 3.1 理论依据
 
-此步骤只回答一个问题：**用户的手能不能物理触碰到这个点？**
+此步骤回答的核心问题是：**用户的手能不能物理触碰到这个点？**
 
 - **能触碰** → 允许使用直接触摸 (Direct Touch)
 - **不能触碰** → 必须使用眼动+手势 (Gaze & Pinch) 或射线 (Ray-casting)
 
-判定标准是**臂长**。这是人体骨骼结构决定的硬性物理约束。
+可达性的判定需要同时满足三个层次的约束：
 
-### 3.2 判定公式
+| 约束层 | 判定内容 | 物理依据 |
+| :--- | :--- | :--- |
+| 视野范围 | 该点是否在用户可及的视觉范围内 | 颈椎舒适转动范围 |
+| 关节活动度 | 肩关节能否将手臂导向该方向 | 肩关节 ROM |
+| 距离 | 手臂能否够到该点的距离 | 功能性臂长 |
+
+三个约束全部通过，才判定为可达。任一约束未通过，即判定为不可达。
+
+### 3.2 约束一：视野范围
+
+在 XR 交互中，用户不会与视野之外的空间发生有意义的交互。位于身后或极端侧方的空间，即使手臂物理上可达，也不具备实际交互价值。
+
+视野约束基于颈椎的**舒适转动范围**（非极限范围）定义，以用户身体朝向为基准：
 
 ```
-# 对于空间中的任意一个目标点 P_target：
+# 视野范围参数（基于颈椎舒适转动范围，非设备即时 FOV）
+FOV_HORIZONTAL = 70    # 水平方向：左右各 ±70°
+FOV_UP = 50            # 垂直向上：+50°（相对于重力水平面）
+FOV_DOWN = 60          # 垂直向下：-60°（相对于重力水平面）
 
-# 计算该点到左、右肩关节的距离，取较小值
-D_left  = distance(P_target, P_shoulder_left)
-D_right = distance(P_target, P_shoulder_right)
-D = min(D_left, D_right)
+def check_visual_field(P_target, P_head, body_forward):
+    """
+    判断目标点是否在用户的有效视野范围内。
+    垂直偏角以重力水平面（经过用户眼睛的水平面）为基准，
+    不随用户抬头/低头而改变。
+    """
+    direction = normalize(P_target - P_head)
 
-# 使用距离较近的那侧手臂的臂长作为判定依据
-if D == D_left:
-    L_arm = L_arm_left
-else:
-    L_arm = L_arm_right
+    # 水平偏角（相对于身体朝前方向）
+    horizontal_angle = angle_in_horizontal_plane(direction, body_forward)
 
-# 可达性判定
-if D <= L_arm:
-    reachable = True
-else:
-    reachable = False
+    # 垂直偏角（相对于重力水平面，向上为正）
+    vertical_angle = elevation_angle(direction)
+
+    if abs(horizontal_angle) > FOV_HORIZONTAL:
+        return False
+    if vertical_angle > FOV_UP:
+        return False
+    if vertical_angle < -FOV_DOWN:
+        return False
+
+    return True
 ```
 
-### 3.3 模态映射规则
+超出此范围的点直接归类为"不可达"，不进入后续评估。
+
+### 3.3 约束二：关节活动度
+
+肩关节通过以下运动自由度控制手臂的空间指向：
+
+| 自由度 | 运动描述 | 实用活动范围 |
+| :--- | :--- | :--- |
+| 屈曲 (Flexion) | 手臂向前上方抬起 | 0° – 150° |
+| 伸展 (Extension) | 手臂向后方摆动 | 0° – 40° |
+| 外展 (Abduction) | 手臂向外侧抬起 | 0° – 150° |
+| 内收 (Adduction) | 手臂越过身体中线 | 0° – 30° |
+| 外旋 (External Rotation) | 上臂沿自身轴向外旋转 | 0° – 80° |
+| 内旋 (Internal Rotation) | 上臂沿自身轴向内旋转 | 0° – 70° |
+
+所有角度以手臂自然下垂为 0° 起点。内旋/外旋在肘关节弯曲时会显著改变手在空间中的位置（前臂绕上臂轴线扫动），因此纳入可达性模型。
+
+**关于身体后方空间：** 肩关节伸展仅约 40°，意味着手臂最多向后偏离身体约 40°（此时手仍远低于水平面）。身体正后方在肩关节的运动范围之外，属于不可达区域。实际上，该区域已被 3.2 的视野约束（±70°）排除。
+
+**自由度耦合：** 当手臂斜向伸展时需要同时使用多个自由度，各自的可用范围会因关节结构的相互约束而缩减：
+
+| 组合情况 | 耦合效果 |
+| :--- | :--- |
+| 屈曲 + 外展同时较大 | 各自上限约减少 15%（如屈曲从 150° 降至约 130°） |
+| 伸展 + 外展 | 外展上限大幅降至约 25° |
+| 屈曲 + 内收 | 内收范围略增（前方跨中线较容易，可达约 40°） |
+| 伸展 + 内收 | 几乎不可达 |
+| 高屈曲/外展 + 内旋 | 内旋范围随抬升角度增大而缩减（肩峰撞击限制） |
+| 低屈曲 + 外旋 | 外旋范围充裕，前臂可大幅向外侧扫动 |
+
+```
+def check_joint_rom(P_target, P_shoulder, body_forward, body_right):
+    """
+    将目标方向分解为肩关节各自由度分量，
+    检查是否在关节活动范围内。
+    """
+    direction = normalize(P_target - P_shoulder)
+
+    # 分解为矢状面分量（屈曲/伸展）
+    flex_ext = compute_flexion_extension(direction, body_forward)
+
+    # 分解为冠状面分量（外展/内收）
+    abd_add = compute_abduction_adduction(direction, body_right)
+
+    # 计算所需的旋转分量
+    rotation = compute_required_rotation(P_target, P_shoulder, flex_ext, abd_add)
+
+    # 计算耦合后的实际 ROM 限制
+    rom_limits = apply_coupling(flex_ext, abd_add, rotation)
+
+    if not within_limits(flex_ext, abd_add, rotation, rom_limits):
+        return False
+
+    return True
+```
+
+### 3.4 约束三：距离
+
+手臂的物理长度决定了可达空间的最远边界。
+
+```
+def check_distance(P_target, P_shoulder, L_arm):
+    """
+    判断目标点是否在臂长范围内。
+    """
+    D = distance(P_target, P_shoulder)
+    return D <= L_arm
+```
+
+### 3.5 综合可达性判定
+
+三层约束按顺序执行。视野范围最先检查（计算代价最低），通过后再检查关节活动度和距离。
+
+```
+def check_reachability(P_target, user_model):
+    """
+    综合三层约束，判定目标点的可达性。
+    """
+    P_head = user_model.head_position
+    body_forward = user_model.body_forward_direction
+    body_right = user_model.body_right_direction
+
+    # === 约束一：视野范围 ===
+    if not check_visual_field(P_target, P_head, body_forward):
+        return False
+
+    # === 约束二 & 三：关节活动度 + 距离 ===
+    P_shoulder = get_nearest_shoulder(P_target, user_model)
+    L_arm = get_corresponding_arm_length(P_shoulder, user_model)
+
+    if not check_joint_rom(P_target, P_shoulder, body_forward, body_right):
+        return False
+
+    if not check_distance(P_target, P_shoulder, L_arm):
+        return False
+
+    return True
+```
+
+### 3.6 模态映射规则
 
 | 可达性结果 | 交互模态 | 说明 |
 | :--- | :--- | :--- |
