@@ -240,23 +240,39 @@ def check_visual_field(P_target, P_head, body_forward):
 | 低屈曲 + 外旋 | 外旋范围充裕，前臂可大幅向外侧扫动 |
 
 ```
-def check_joint_rom(P_target, P_shoulder, body_forward, body_right):
+def check_joint_rom(P_target, P_shoulder, body_forward, body_right,
+                    L_upper, L_forearm):
     """
     将目标方向分解为肩关节各自由度分量，
     检查是否在关节活动范围内。
     """
     direction = normalize(P_target - P_shoulder)
 
-    # 分解为矢状面分量（屈曲/伸展）
+    # === 第一步：分解屈曲/伸展 和 外展/内收 ===
+    # 这两个自由度决定上臂的指向方向（即肘关节在空间中的位置）。
+    # 将目标方向分别投影到矢状面和冠状面即可获得。
+
+    # 矢状面投影 → 屈曲/伸展分量
     flex_ext = compute_flexion_extension(direction, body_forward)
 
-    # 分解为冠状面分量（外展/内收）
+    # 冠状面投影 → 外展/内收分量
     abd_add = compute_abduction_adduction(direction, body_right)
 
-    # 计算所需的旋转分量
-    rotation = compute_required_rotation(P_target, P_shoulder, flex_ext, abd_add)
+    # === 第二步：由上臂指向确定肘关节位置 ===
+    # 屈曲/伸展 + 外展/内收 → 上臂方向向量 → 肘关节坐标
+    upper_arm_dir = resolve_upper_arm_direction(flex_ext, abd_add,
+                                                body_forward, body_right)
+    P_elbow = P_shoulder + upper_arm_dir * L_upper
 
-    # 计算耦合后的实际 ROM 限制
+    # === 第三步：反算所需的内旋/外旋角 ===
+    # 已知肘关节位置和目标手腕位置，前臂方向随之确定。
+    # 前臂相对于上臂轴线的偏转角度即为所需的旋转角：
+    #   - 偏向外侧 → 需要外旋
+    #   - 偏向内侧 → 需要内旋
+    forearm_dir = normalize(P_target - P_elbow)
+    rotation = angle_around_axis(forearm_dir, upper_arm_dir)
+
+    # === 第四步：检查所有分量是否在耦合后的 ROM 内 ===
     rom_limits = apply_coupling(flex_ext, abd_add, rotation)
 
     if not within_limits(flex_ext, abd_add, rotation, rom_limits):
