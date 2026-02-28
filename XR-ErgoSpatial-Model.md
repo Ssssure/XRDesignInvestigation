@@ -467,6 +467,13 @@ def compute_normalized_torque(alpha, beta, L_upper, L_forearm):
     return normalized_torque
 ```
 
+归一化疲劳指数与个人的手臂绝对质量无关，它只取决于：
+
+- 手臂的几何姿态（肩关节抬升角 α、肘关节弯曲角 β）
+- 手臂的长度（上臂长 L_upper、前臂长 L_forearm）
+- 人体通用的质量分布比例（上臂占 54%、前臂占 46%，这是文献常数，不因人而异）
+
+
 ### 4.5 MVC 阈值分区
 
 基于肌肉疲劳研究（Sjogaard et al., 1986; Rohmert, 1960），持续肌肉负荷与可维持时长的关系：
