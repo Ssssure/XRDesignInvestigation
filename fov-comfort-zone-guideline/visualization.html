@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XR 空间 UI 布局 — 视野角与舒适度复合区域可视化</title>
+<style>
+  :root {
+    --bg: #0e1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --h0: #00d26a;
+    --h1: #7ec850;
+    --h2: #f5c542;
+    --h3: #f5a623;
+    --h4: #e74c3c;
+    --h5: #8b0000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .header {
+    text-align: center;
+    padding: 32px 24px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .header p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .main-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    gap: 24px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+  }
+
+  .control-group label {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .control-group select, .control-group input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  .canvas-container {
+    position: relative;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .view-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .view-panel h2 {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  canvas {
+    border-radius: 8px;
+    cursor: crosshair;
+  }
+
+  .info-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .info-panel h3 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: var(--accent);
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .info-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .info-card .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .info-card .value {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .comfort-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+  }
+
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .tab-bar button {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-bar button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .tab-bar button:hover:not(.active) {
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>XR 空间 UI 布局 — 复合区域可视化</h1>
+  <p>基于人眼视野角与头部转动舒适度的分区模型 · 交互式探索工具</p>
+</div>
+
+<div class="main-layout">
+
+  <div class="controls">
+    <div class="control-group">
+      <label>姿态</label>
+      <select id="posture">
+        <option value="standing">站姿 (自然视线 -10°)</option>
+        <option value="sitting">坐姿 (自然视线 -15°)</option>
+      </select>
+    </div>
+    <div class="tab-bar">
+      <button class="active" data-view="combined">复合区域图</button>
+      <button data-view="horizontal">水平剖面</button>
+      <button data-view="vertical">垂直剖面</button>
+    </div>
+  </div>
+
+  <div class="canvas-container">
+    <div class="view-panel" id="mainViewPanel">
+      <h2 id="mainViewTitle">复合区域图 — 用户视角前方投影</h2>
+      <canvas id="mainCanvas" width="700" height="520"></canvas>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+
+  <div class="info-panel" id="infoPanel">
+    <h3>指针信息 — 将鼠标移至图上查看区域详情</h3>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="label">水平角度 / 垂直角度</div>
+        <div class="value" id="infoAngle">— / —</div>
+      </div>
+      <div class="info-card">
+        <div class="label">综合舒适等级</div>
+        <div class="value" id="infoComfort">—</div>
+      </div>
+      <div class="info-card">
+        <div class="label">水平区域</div>
+        <div class="value" id="infoHZone">—</div>
+      </div>
+      <div class="info-card">
+        <div class="label">垂直区域</div>
+        <div class="value" id="infoVZone">—</div>
+      </div>
+      <div class="info-card">
+        <div class="label">身体感受</div>
+        <div class="value" id="infoFeel">—</div>
+      </div>
+      <div class="info-card">
+        <div class="label">适合内容</div>
+        <div class="value" id="infoContent">—</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const ZONES_H = [
+  { id:'H0', name:'静默焦点区', min:0, max:10, color:'#00d26a', stars:'★★★★★',
+    feel:'完全无感，纯认知沉浸。无需任何眼球或头部运动。',
+    content:'主任务、媒体内容、精细阅读文本' },
+  { id:'H1', name:'核心舒适区', min:10, max:25, color:'#7ec850', stars:'★★★★☆',
+    feel:'轻松自在，类似目光自然扫视桌面。无肌肉紧张。',
+    content:'主交互面板、信息展示、辅助工具栏' },
+  { id:'H2', name:'自然转视区', min:25, max:45, color:'#f5c542', stars:'★★★☆☆',
+    feel:'轻微转头，如偏头看身旁同事。可停留数十秒。',
+    content:'通知提示、次要信息、导航元素' },
+  { id:'H3', name:'刻意转头区', min:45, max:70, color:'#f5a623', stars:'★★☆☆☆',
+    feel:'需要刻意转头，颈部有明确工作感。数秒可接受。',
+    content:'导航锚点、低频操作、环境元素' },
+  { id:'H4', name:'极限边缘区', min:70, max:100, color:'#e74c3c', stars:'★☆☆☆☆',
+    feel:'大幅回头，颈肌明显紧张。仅适合瞬间瞥视。',
+    content:'环境氛围、空间方位线索' },
+  { id:'H5', name:'身体转向区', min:100, max:180, color:'#8b0000', stars:'☆☆☆☆☆',
+    feel:'需要躯干转动，打断任务。应避免放置内容。',
+    content:'避免放置任何需要交互的内容' }
+];
+
+const ZONES_V_UP = [
+  { id:'V0', name:'自然视线区', min:0, max:5, color:'#00d26a', stars:'★★★★★',
+    feel:'完全无感，视线的默认归宿。',
+    content:'核心任务内容' },
+  { id:'V+1', name:'舒适上视区', min:5, max:15, color:'#7ec850', stars:'★★★★☆',
+    feel:'轻微上瞥，自然且不费力。',
+    content:'信息展示、通知提示' },
+  { id:'V+2', name:'适度上视区', min:15, max:25, color:'#f5c542', stars:'★★★☆☆',
+    feel:'轻微仰头，颈后肌群工作。短暂可接受。',
+    content:'沉浸元素、环境信息' },
+  { id:'V+3', name:'极限上视区', min:25, max:90, color:'#e74c3c', stars:'★☆☆☆☆',
+    feel:'明显仰头，颈部后伸不适。应避免持续注视。',
+    content:'避免（仅环境氛围）' }
+];
+
+const ZONES_V_DOWN = [
+  { id:'V0', name:'自然视线区', min:0, max:5, color:'#00d26a', stars:'★★★★★',
+    feel:'完全无感，视线的默认归宿。',
+    content:'核心任务内容' },
+  { id:'V-1', name:'舒适下视区', min:5, max:20, color:'#7ec850', stars:'★★★★☆',
+    feel:'轻微下瞥，符合阅读和手部操作习惯。比平视更放松。',
+    content:'交互面板、手部操作区' },
+  { id:'V-2', name:'适度下视区', min:20, max:35, color:'#f5c542', stars:'★★★☆☆',
+    feel:'中度低头，如站着看手机。轻微颈部负荷。',
+    content:'辅助信息、低频操作' },
+  { id:'V-3', name:'极限下视区', min:35, max:90, color:'#e74c3c', stars:'★★☆☆☆',
+    feel:'过度低头，颈椎压力较大。应避免持续注视。',
+    content:'避免（仅环境氛围）' }
+];
+
+function getHZone(absAngle) {
+  for (const z of ZONES_H) {
+    if (absAngle >= z.min && absAngle < z.max) return z;
+  }
+  return ZONES_H[ZONES_H.length - 1];
+}
+
+function getVZone(angle) {
+  if (angle >= 0) {
+    const abs = angle;
+    for (const z of ZONES_V_UP) {
+      if (abs >= z.min && abs < z.max) return z;
+    }
+    return ZONES_V_UP[ZONES_V_UP.length - 1];
+  } else {
+    const abs = -angle;
+    for (const z of ZONES_V_DOWN) {
+      if (abs >= z.min && abs < z.max) return z;
+    }
+    return ZONES_V_DOWN[ZONES_V_DOWN.length - 1];
+  }
+}
+
+function comfortIndex(zone) {
+  return zone.stars.split('').filter(c => c === '★').length;
+}
+
+function getCompositeColor(hAngle, vAngle) {
+  const hz = getHZone(Math.abs(hAngle));
+  const vz = getVZone(vAngle);
+  const hc = comfortIndex(hz);
+  const vc = comfortIndex(vz);
+  const minComfort = Math.min(hc, vc);
+  const colors = ['#8b0000','#e74c3c','#f5a623','#f5c542','#7ec850','#00d26a'];
+  return colors[minComfort];
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return {r,g,b};
+}
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+let currentView = 'combined';
+let posture = 'standing';
+
+const postureSelect = document.getElementById('posture');
+postureSelect.addEventListener('change', () => {
+  posture = postureSelect.value;
+  draw();
+});
+
+document.querySelectorAll('.tab-bar button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    draw();
+  });
+});
+
+function draw() {
+  if (currentView === 'combined') drawCombined();
+  else if (currentView === 'horizontal') drawHorizontalProfile();
+  else if (currentView === 'vertical') drawVerticalProfile();
+  drawLegend();
+}
+
+function drawCombined() {
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.fillStyle = '#0e1117';
+  ctx.fillRect(0, 0, W, H);
+
+  document.getElementById('mainViewTitle').textContent = '复合区域图 — 用户视角前方投影';
+
+  const cx = W / 2;
+  const cy = H / 2;
+  const hRange = 120;
+  const vRange = 70;
+  const scaleX = (W - 60) / (hRange * 2);
+  const scaleY = (H - 60) / (vRange * 2);
+
+  for (let px = 30; px < W - 30; px++) {
+    for (let py = 30; py < H - 30; py++) {
+      const hAngle = (px - cx) / scaleX;
+      const vAngle = -(py - cy) / scaleY;
+      const color = getCompositeColor(hAngle, vAngle);
+      const rgb = hexToRgb(color);
+      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)`;
+      ctx.fillRect(px, py, 1, 1);
+    }
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+
+  const hBounds = [10, 25, 45, 70, 100];
+  hBounds.forEach(a => {
+    if (a * scaleX < (W/2 - 30)) {
+      const x1 = cx + a * scaleX;
+      const x2 = cx - a * scaleX;
+      ctx.beginPath(); ctx.moveTo(x1, 30); ctx.lineTo(x1, H-30); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x2, 30); ctx.lineTo(x2, H-30); ctx.stroke();
+    }
+  });
+
+  const vBoundsUp = [5, 15, 25];
+  const vBoundsDown = [5, 20, 35];
+  vBoundsUp.forEach(a => {
+    const y = cy - a * scaleY;
+    if (y > 30) {
+      ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(W-30, y); ctx.stroke();
+    }
+  });
+  vBoundsDown.forEach(a => {
+    const y = cy + a * scaleY;
+    if (y < H - 30) {
+      ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(W-30, y); ctx.stroke();
+    }
+  });
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(cx, 30); ctx.lineTo(cx, H-30); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(30, cy); ctx.lineTo(W-30, cy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.strokeStyle = 'rgba(0,210,106,0.8)';
+  ctx.lineWidth = 2;
+  const gLeft = cx - 25 * scaleX;
+  const gRight = cx + 25 * scaleX;
+  const gTop = cy - 5 * scaleY;
+  const gBottom = cy + 20 * scaleY;
+  ctx.strokeRect(gLeft, gTop, gRight - gLeft, gBottom - gTop);
+  ctx.fillStyle = 'rgba(0,210,106,0.08)';
+  ctx.fillRect(gLeft, gTop, gRight - gLeft, gBottom - gTop);
+
+  ctx.fillStyle = 'rgba(0,210,106,0.9)';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Golden Zone', cx, gTop - 5);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('0°', cx, H - 26);
+
+  const hLabels = [10,25,45,70,100];
+  hLabels.forEach(a => {
+    const x = cx + a * scaleX;
+    if (x < W - 30) {
+      ctx.fillText(`${a}°`, x, H - 26);
+      ctx.fillText(`-${a}°`, cx - a * scaleX, H - 26);
+    }
+  });
+
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('0°', 28, cy);
+  [5,15,25].forEach(a => {
+    const y = cy - a * scaleY;
+    if (y > 30) ctx.fillText(`+${a}°`, 28, y);
+  });
+  [5,20,35].forEach(a => {
+    const y = cy + a * scaleY;
+    if (y < H - 30) ctx.fillText(`-${a}°`, 28, y);
+  });
+
+  ctx.font = '10px sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('水平角度 →', W - 50, H - 8);
+  ctx.save();
+  ctx.translate(12, cy);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('↑ 垂直角度', 0, 0);
+  ctx.restore();
+}
+
+function drawHorizontalProfile() {
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.fillStyle = '#0e1117';
+  ctx.fillRect(0, 0, W, H);
+
+  document.getElementById('mainViewTitle').textContent = '水平剖面 — 俯视图';
+
+  const cx = W / 2;
+  const cy = H * 0.65;
+  const radius = Math.min(W, H) * 0.42;
+
+  ZONES_H.slice().reverse().forEach(zone => {
+    const startAngle = -(zone.max) * Math.PI / 180;
+    const endAngle = (zone.max) * Math.PI / 180;
+    const rFill = radius * (zone.max / 180);
+
+    ctx.fillStyle = zone.color + '55';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    const drawAngle1 = -Math.PI / 2 + startAngle;
+    const drawAngle2 = -Math.PI / 2 + endAngle;
+    ctx.arc(cx, cy, rFill > radius ? radius : rFill, drawAngle1, drawAngle2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = '#58a6ff';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('用户', cx, cy + 20);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx, cy - radius - 10);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillText('正前方 0°', cx, cy - radius - 14);
+
+  ZONES_H.forEach(zone => {
+    if (zone.max > 120) return;
+    const midAngle = (zone.min + Math.min(zone.max, 100)) / 2;
+    const labelR = radius * (Math.min(zone.max, 120) / 180) * 0.7 + 15;
+    const rad = midAngle * Math.PI / 180;
+    const lx = cx + Math.sin(rad) * labelR;
+    const ly = cy - Math.cos(rad) * labelR;
+
+    ctx.fillStyle = zone.color + 'cc';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${zone.id} ${zone.name}`, lx + 5, ly);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(`${zone.min}°-${zone.max}°`, lx + 5, ly + 14);
+  });
+}
+
+function drawVerticalProfile() {
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.fillStyle = '#0e1117';
+  ctx.fillRect(0, 0, W, H);
+
+  document.getElementById('mainViewTitle').textContent = '垂直剖面 — 侧视图';
+
+  const cx = W / 2;
+  const cy = H / 2;
+  const barWidth = W - 120;
+  const barHeight = 60;
+
+  const gazeOffset = posture === 'standing' ? -10 : -15;
+
+  const allZones = [
+    { label: 'V+3 极限上视', minAbs: 25, maxAbs: 50, dir: 'up', color: '#e74c3c' },
+    { label: 'V+2 适度上视', minAbs: 15, maxAbs: 25, dir: 'up', color: '#f5c542' },
+    { label: 'V+1 舒适上视', minAbs: 5, maxAbs: 15, dir: 'up', color: '#7ec850' },
+    { label: 'V0 自然视线', minAbs: -5, maxAbs: 5, dir: 'center', color: '#00d26a' },
+    { label: 'V-1 舒适下视', minAbs: 5, maxAbs: 20, dir: 'down', color: '#7ec850' },
+    { label: 'V-2 适度下视', minAbs: 20, maxAbs: 35, dir: 'down', color: '#f5c542' },
+    { label: 'V-3 极限下视', minAbs: 35, maxAbs: 55, dir: 'down', color: '#e74c3c' },
+  ];
+
+  const totalUp = 50;
+  const totalDown = 55;
+  const totalRange = totalUp + totalDown;
+  const topY = 50;
+  const bottomY = H - 50;
+  const rangeH = bottomY - topY;
+  const zeroY = topY + (totalUp / totalRange) * rangeH;
+
+  function angleToY(angle) {
+    return zeroY - (angle / totalRange) * rangeH;
+  }
+
+  allZones.forEach(z => {
+    let y1, y2;
+    if (z.dir === 'up') {
+      y1 = angleToY(z.maxAbs);
+      y2 = angleToY(z.minAbs);
+    } else if (z.dir === 'down') {
+      y1 = angleToY(-z.minAbs);
+      y2 = angleToY(-z.maxAbs);
+    } else {
+      y1 = angleToY(5);
+      y2 = angleToY(-5);
+    }
+
+    const x = cx - barWidth / 2;
+    ctx.fillStyle = z.color + '44';
+    ctx.fillRect(x, y1, barWidth, y2 - y1);
+    ctx.strokeStyle = z.color + '88';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y1, barWidth, y2 - y1);
+
+    ctx.fillStyle = z.color + 'dd';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'left';
+    const midY = (y1 + y2) / 2;
+    ctx.fillText(z.label, x + 10, midY + 4);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.textAlign = 'right';
+    if (z.dir === 'up') {
+      ctx.fillText(`+${z.minAbs}° ~ +${z.maxAbs}°`, x + barWidth - 10, midY + 4);
+    } else if (z.dir === 'down') {
+      ctx.fillText(`-${z.minAbs}° ~ -${z.maxAbs}°`, x + barWidth - 10, midY + 4);
+    } else {
+      ctx.fillText(`-5° ~ +5°`, x + barWidth - 10, midY + 4);
+    }
+  });
+
+  ctx.strokeStyle = 'rgba(0,210,106,0.8)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 4]);
+  ctx.beginPath();
+  ctx.moveTo(cx - barWidth / 2 - 20, zeroY);
+  ctx.lineTo(cx + barWidth / 2 + 20, zeroY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(0,210,106,0.9)';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`自然视线 (水平线 ${gazeOffset}°)`, cx - barWidth / 2 - 25, zeroY + 4);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  const horizY = angleToY(-gazeOffset);
+  ctx.beginPath();
+  ctx.moveTo(cx - barWidth / 2 - 20, horizY);
+  ctx.lineTo(cx + barWidth / 2 + 20, horizY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillText('真实水平线 0°', cx - barWidth / 2 - 25, horizY + 4);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`姿态: ${posture === 'standing' ? '站姿' : '坐姿'}`, cx, H - 20);
+}
+
+function drawLegend() {
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  const items = [
+    { color: '#00d26a', label: '★★★★★ 最佳' },
+    { color: '#7ec850', label: '★★★★☆ 舒适' },
+    { color: '#f5c542', label: '★★★☆☆ 适度' },
+    { color: '#f5a623', label: '★★☆☆☆ 费力' },
+    { color: '#e74c3c', label: '★☆☆☆☆ 极限' },
+    { color: '#8b0000', label: '☆☆☆☆☆ 避免' },
+  ];
+  items.forEach(it => {
+    const div = document.createElement('div');
+    div.className = 'legend-item';
+    div.innerHTML = `<span class="legend-color" style="background:${it.color}"></span>${it.label}`;
+    legend.appendChild(div);
+  });
+}
+
+canvas.addEventListener('mousemove', (e) => {
+  if (currentView !== 'combined') return;
+  const rect = canvas.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+
+  const W = canvas.width;
+  const H = canvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const hRange = 120;
+  const vRange = 70;
+  const scaleX = (W - 60) / (hRange * 2);
+  const scaleY = (H - 60) / (vRange * 2);
+
+  const hAngle = (px - cx) / scaleX;
+  const vAngle = -(py - cy) / scaleY;
+
+  if (Math.abs(hAngle) > hRange || Math.abs(vAngle) > vRange) return;
+
+  const hz = getHZone(Math.abs(hAngle));
+  const vz = getVZone(vAngle);
+  const hc = comfortIndex(hz);
+  const vc = comfortIndex(vz);
+  const minC = Math.min(hc, vc);
+  const comfortLabels = ['避免使用', '极限/瞬间', '费力/数秒', '适度/数十秒', '舒适/数分钟', '最佳/无限'];
+
+  document.getElementById('infoAngle').textContent = `水平 ${hAngle.toFixed(1)}° / 垂直 ${vAngle.toFixed(1)}°`;
+
+  const gazeOffset = posture === 'standing' ? -10 : -15;
+  const absV = (vAngle + gazeOffset).toFixed(1);
+  document.getElementById('infoAngle').textContent += `  (绝对垂直 ${absV}°)`;
+
+  const badge = `<span class="comfort-badge" style="background:${getCompositeColor(hAngle, vAngle)}33;color:${getCompositeColor(hAngle, vAngle)}">${comfortLabels[minC]}</span>`;
+  document.getElementById('infoComfort').innerHTML = `${'★'.repeat(minC)}${'☆'.repeat(5-minC)} ${badge}`;
+
+  document.getElementById('infoHZone').innerHTML = `<span style="color:${hz.color}">${hz.id} ${hz.name}</span> (${hz.min}°~${hz.max}°)`;
+  document.getElementById('infoVZone').innerHTML = `<span style="color:${vz.color}">${vz.id} ${vz.name}</span>`;
+
+  const feelText = minC === hc ? hz.feel : vz.feel;
+  document.getElementById('infoFeel').textContent = feelText;
+  document.getElementById('infoContent').textContent = minC === hc ? hz.content : vz.content;
+});
+
+draw();
+</script>
+</body>
+</html>
