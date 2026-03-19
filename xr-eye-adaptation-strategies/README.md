@@ -327,8 +327,8 @@ Purkinje 位移使暗环境中红色失效               ──→  D5 暗场景
 
 | 方法 | 适用技术栈 | 描述 |
 |---|---|---|
-| **全局 Post-Processing Fade** | Unity / Unreal | 在后处理阶段叠加亮度渐变滤镜（如乘以 0→1 或 1→0 的 alpha 曲线） |
-| **Tone Mapping 参数渐变** | 自研渲染管线 | 渐变 Tone Mapping 曲线的曝光参数（exposure），而非线性叠加遮罩 |
+| **全局 Post-Processing Fade(ease-in, ease-out)** | Unity / Unreal | 在后处理阶段叠加亮度渐变滤镜（如乘以 0→1 或 1→0 的 alpha 曲线） |
+| **Tone Mapping 参数渐变(ease-in-out)** | 自研渲染管线 | 渐变 Tone Mapping 曲线的曝光参数（exposure），而非线性叠加遮罩 |
 | **场景交叉溶解（Cross-Dissolve）** | 通用 | 两个场景并行渲染，旧场景淡出的同时新场景淡入，保持亮度平滑 |
 | **中间过渡帧** | 通用 | 在两个场景之间插入中间亮度状态的过渡帧序列 |
 
