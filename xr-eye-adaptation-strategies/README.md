@@ -406,7 +406,7 @@ Purkinje 位移使暗环境中红色失效               ──→  D5 暗场景
 
 #### 研究支撑
 
-2025 年的 Temporal Brightness Management 研究表明，基于内容感知的实时亮度管理可将眼睛疲劳指标降低约 45%，同时不显著影响画质评分。
+2025 年的 Temporal Brightness Management for Immersive Content 研究表明，基于内容感知的实时亮度管理可将眼睛疲劳指标降低约 45%，同时不显著影响画质评分。
 
 ### 5.5 D4：对比度保护（Contrast Preservation）
 
