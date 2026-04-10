@@ -745,7 +745,21 @@ XR 中的字号以**视角度**为基准，确保文字在任何深度和设备�
 | **中文** | +0%–3% | 中文字符为等宽方块，天然间距较好，微调即可 |
 | **暗场景** | 额外 +3%–5% | 暗视觉下视锐度降低，字母边缘更模糊，需要更大间距补偿 |
 
-> **⁉️绝对禁止负 tracking**：在 XR 环境中，**任何场景下都不应使用负字间距**。传统平面设计中标题常用的紧缩排版（如 -2% tracking）在 XR 低分辨率下会直接导致字母融合不可辨认——这不是风格问题，是可读性问题。但Apple设计规范中别的平台存在 负tracking，vision OS没有明确列出。
+> **关于负 tracking 的分场景策略**：
+>
+> Apple 在 iOS/iPadOS 上对 SF Pro 系统字体广泛使用负 tracking——Body 17pt 为 -0.43px，Large Title 34pt 为 -1.05px，几乎所有 ≥15pt 的文字样式均为负值；仅 Footnote（13pt, +0.03px）和 Caption（12pt, +0.12px）等小字号为正值。visionOS 共享同一套 SF Pro 字体系统，但官方明确表示"tracking (spacing between letters) slightly increased to enhance legibility"——即在 iOS 基础上**向正方向偏移**以增强空间环境下的可读性，同时将正文字重从 Regular 提升至 Medium、标题从 Semibold 提升至 Bold 作为配合补偿。
+>
+> 这意味着 visionOS 并未完全消除负 tracking，而是**减小了负 tracking 的幅度**。结合 Apple Vision Pro 较高的 PPD（均值 ~34，中心峰值 ~44），大字号标题在此硬件上拥有足够的像素裕度来支撑轻微的负间距。
+>
+> **分 PPD 策略**：
+>
+> | PPD 区间 | 正文（Body 及以下） | 大标题（≥ Headline） | 依据 |
+> |---|---|---|---|
+> | **≤25 PPD**（主流 VR） | ❌ 禁止负 tracking | ❌ 禁止负 tracking | 字母高度仅 ~18px（Body 0.7°），边缘抗锯齿扩散 ~0.5–1px，负间距直接导致字母粘连融合 |
+> | **25–34 PPD**（当前主流 VR/MR） | ❌ 禁止负 tracking | ⚠️ 可谨慎使用极轻微负值（≤ -0.3px） | 大标题（≥1.0° 视角）字母高度 ≥25px，边缘清晰度开始有裕度；但正文像素仍偏紧 |
+> | **35+ PPD**（高端 MR，如 Vision Pro 中心区域） | ⚠️ 可接受极轻微负值（≤ -0.2px），与 visionOS 系统行为一致 | ✅ 可使用适度负 tracking（参照 visionOS 系统值） | visionOS 系统字体本身在此 PPD 下即使用负 tracking，Apple 已通过加粗字重（Medium/Bold）补偿了间距收紧带来的清晰度损失 |
+>
+> **底线规则**：在 PPD ≤ 25 的设备上（覆盖 2026 年约 90% 的消费级 VR/MR 头显），任何场景下都不应使用负字间距——这不是风格问题，是可读性问题。在 35+ PPD 设备上，若使用系统字体（SF Pro）并遵循 visionOS 的字重提升策略（正文 Medium+、标题 Bold+），可沿用系统默认的负 tracking 值。自定义字体的负 tracking 需逐字号实测验证。
 
 ### 5.3 行长（Line Length / Measure）
 
