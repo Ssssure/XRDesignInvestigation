@@ -1,0 +1,10 @@
+# 方案 B：本机 / 编辑器工具目录不进入版本库
+.specstory/
+.vscode/
+.cursorindexingignore
+
+# 外置盘等环境下产生的 AppleDouble 副文件
+._*
+
+# 常见本机系统文件
+.DS_Store
